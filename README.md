@@ -38,7 +38,8 @@ Dockerfile                    flyway/flyway + the sql/ directory
 ## Adding a migration
 
 1. Add `sql/V<n>__<short_description>.sql`. **Never edit an applied migration** — Flyway records
-   a checksum of each one and refuses to run when a previously applied file has changed.
+   a checksum of each one and refuses to run when a previously applied file has changed. CI
+   enforces this: `sql/` must be append-only against the newest tag.
 2. Run the **Build & push migrations image** workflow. It reads the newest `x.y.z` tag,
    increases the patch number by one (`0.0.1` when there are no tags), publishes the image
    under that version, and then tags this repository with it — so the code and the image
@@ -48,6 +49,28 @@ Dockerfile                    flyway/flyway + the sql/ directory
 
 For a minor or major bump, pass the exact version in the workflow's optional `version` input;
 the automatic patch bump is skipped. The run fails before building if that tag already exists.
+
+## Validation
+
+Flyway has no offline check — whether a migration is valid is a question only a real Postgres can
+answer. CI stands one up as a throwaway service container and applies the migrations to it along
+both paths that matter:
+
+| | what it proves |
+|---|---|
+| **fresh** | an empty database takes every migration from `V1` — what a new environment does |
+| **upgrade** | a database migrated to the last released tag takes the new migrations on top — what production does |
+
+It then `pg_dump`s both and requires them to be identical, so a schema can never depend on which
+route a database took to get there. On top of that, `sql/` is checked to be append-only since the
+newest tag, because an edited migration is a checksum mismatch and a backend that will not start.
+
+This runs on every pull request touching `sql/` or the `Dockerfile`, and again as a gate in the
+release run — nothing is published that has not been applied to a database first. The definition
+is shared: `.github/workflows/validate-migrations.yml`.
+
+The Postgres major version is pinned in that workflow's `postgres_image` default and **must track
+the real database**; validating against a different major can miss a syntax or behaviour change.
 
 ## Running it by hand
 

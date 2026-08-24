@@ -2,7 +2,7 @@ name: Build & push migrations image
 
 # Thin caller. The pipeline itself lives in Kovospace/kovostack-github-workflows.
 #
-# Three things differ from an ordinary application caller:
+# Four things differ from an ordinary application caller:
 #
 #   1. The image is tagged with an explicit VERSION, not the commit sha. That tag
 #      is a contract: the backend declares the schema version it was written
@@ -16,7 +16,11 @@ name: Build & push migrations image
 #      been pushed - so a tag exists only for a version that was really published,
 #      and the code and the image cannot disagree.
 #
-#   3. There is NO deploy step. This image is not a workload of its own - it runs
+#   3. The migrations are applied to a throwaway Postgres before anything is
+#      pushed. Flyway cannot check a migration without a database, and a broken
+#      one surfaces as an init container that will not start.
+#
+#   4. There is NO deploy step. This image is not a workload of its own - it runs
 #      as an init container inside the backend's pod - so there is nothing to
 #      write into the GitOps versions/ directory, and no app_namespace to pass.
 #
@@ -91,8 +95,13 @@ jobs:
           echo "Publishing: ${next}"
           echo "version=${next}" >> "$GITHUB_OUTPUT"
 
+  # Nothing is published until the migrations have actually been applied to a
+  # real Postgres. See .github/workflows/validate-migrations.yml.
+  validate:
+    uses: ./.github/workflows/validate-migrations.yml
+
   pipeline:
-    needs: version
+    needs: [version, validate]
     uses: Kovospace/kovostack-github-workflows/.github/workflows/build-deploy.yml@2.0.3
     with:
       image_name: new-tab-links-migrations
