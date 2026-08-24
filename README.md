@@ -39,10 +39,15 @@ Dockerfile                    flyway/flyway + the sql/ directory
 
 1. Add `sql/V<n>__<short_description>.sql`. **Never edit an applied migration** — Flyway records
    a checksum of each one and refuses to run when a previously applied file has changed.
-2. Run the **Build & push migrations image** workflow with the next `version`.
-3. Tag this repository with that same version, so the code and the image agree.
-4. Bump `flyway.migrations.schema.version` in the backend, in the same commit that starts
+2. Run the **Build & push migrations image** workflow. It reads the newest `x.y.z` tag,
+   increases the patch number by one (`0.0.1` when there are no tags), publishes the image
+   under that version, and then tags this repository with it — so the code and the image
+   agree, and a tag exists only for a version that was really pushed.
+3. Bump `flyway.migrations.schema.version` in the backend, in the same commit that starts
    depending on the new migration.
+
+For a minor or major bump, pass the exact version in the workflow's optional `version` input;
+the automatic patch bump is skipped. The run fails before building if that tag already exists.
 
 ## Running it by hand
 
