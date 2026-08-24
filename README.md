@@ -72,6 +72,36 @@ is shared: `.github/workflows/validate-migrations.yml`.
 The Postgres major version is pinned in that workflow's `postgres_image` default and **must track
 the real database**; validating against a different major can miss a syntax or behaviour change.
 
+## Environment variables
+
+The image carries no connection details. All three of these are **required** — Flyway exits
+non-zero without them, which as an init container means the application pod never starts.
+
+| Variable | Example | |
+|---|---|---|
+| `FLYWAY_URL` | `jdbc:postgresql://postgres:5432/newtablinks` | JDBC url. Note the `jdbc:` prefix — this is not a libpq connection string. |
+| `FLYWAY_USER` | `newtablinks` | Needs DDL rights on the schema: the migrations create and alter tables. |
+| `FLYWAY_PASSWORD` | — | Supply from a `Secret`, never from the manifest. |
+
+Worth setting when it runs as an init container, where the database may still be coming up:
+
+| Variable | Example | |
+|---|---|---|
+| `FLYWAY_CONNECT_RETRIES` | `10` | Retry instead of failing the pod on a database that is not yet accepting connections. Defaults to `0` — one attempt. |
+| `FLYWAY_CONNECT_RETRIES_INTERVAL` | `5` | Seconds between those retries. |
+
+Already baked into the image — listed so the behaviour is not a surprise, not so it can be
+overridden:
+
+| Variable | Value | |
+|---|---|---|
+| `FLYWAY_CLEAN_DISABLED` | `true` | `clean` drops every object in the schema. An init container that could do that on a misconfiguration is a loaded gun pointed at production data. |
+| `FLYWAY_GROUP` | `true` | Applies the pending migrations in one transaction, so a failure rolls back rather than leaving the schema half-migrated. |
+
+Any other Flyway setting follows the same rule — the option name in `SCREAMING_SNAKE_CASE` with a
+`FLYWAY_` prefix, so `connectRetries` becomes `FLYWAY_CONNECT_RETRIES`. `flyway help migrate` in
+the image lists them.
+
 ## Running it by hand
 
 Against a local database:
