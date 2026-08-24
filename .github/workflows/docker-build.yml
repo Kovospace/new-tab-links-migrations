@@ -1,0 +1,40 @@
+name: Build & push migrations image
+
+# Thin caller. The pipeline itself lives in Kovospace/kovostack-github-workflows.
+#
+# Two things differ from an ordinary application caller:
+#
+#   1. The image is tagged with an explicit VERSION, not the commit sha. That tag
+#      is a contract: the backend declares the schema version it was written
+#      against in its Maven property flyway.migrations.schema.version, and the
+#      deployment pins this image to the same value. A commit-derived tag could
+#      not express that.
+#
+#   2. There is NO deploy step. This image is not a workload of its own - it runs
+#      as an init container inside the backend's pod - so there is nothing to
+#      write into the GitOps versions/ directory, and no app_namespace to pass.
+#
+# Releasing a new schema version:
+#   1. add sql/V<n>__<description>.sql
+#   2. run this workflow with `version` set to the next number
+#   3. tag the repository with that same version so the code and the image agree
+#   4. bump flyway.migrations.schema.version in the backend, in the commit that
+#      starts depending on the new migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Schema version to publish as the image tag (e.g. 0.0.1)'
+        type: string
+        required: true
+
+jobs:
+  pipeline:
+    uses: Kovospace/kovostack-github-workflows/.github/workflows/build-deploy.yml@2.0.3
+    with:
+      image_name: new-tab-links-migrations
+      image_version: ${{ inputs.version }}
+      build: true
+      deploy: false
+    secrets: inherit
