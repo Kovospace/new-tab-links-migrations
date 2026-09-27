@@ -40,6 +40,11 @@ on:
         description: 'Override the version to publish (e.g. 0.1.0). Leave empty to bump the patch number of the newest tag.'
         type: string
         required: false
+      skip_validation:
+        description: 'Skip validating the migrations against a throwaway Postgres. Publishes an image nothing has checked - only for when the check itself is wrong.'
+        type: boolean
+        required: false
+        default: false
 
 # One release at a time. Two concurrent runs would both read the same newest tag
 # and both try to publish the same version.
@@ -97,11 +102,20 @@ jobs:
 
   # Nothing is published until the migrations have actually been applied to a
   # real Postgres. See .github/workflows/validate-migrations.yml.
+  # Unless skip_validation is ticked, in which case this job is skipped.
   validate:
+    if: ${{ !inputs.skip_validation }}
     uses: ./.github/workflows/validate-migrations.yml
 
   pipeline:
     needs: [version, validate]
+    # A skipped validate would otherwise skip everything downstream of it. A
+    # failed one still stops the release.
+    if: >-
+      ${{ !cancelled()
+          && needs.version.result == 'success'
+          && (needs.validate.result == 'success'
+              || (inputs.skip_validation && needs.validate.result == 'skipped')) }}
     uses: Kovospace/kovostack-github-workflows/.github/workflows/build-deploy.yml@2.0.3
     with:
       image_name: new-tab-links-migrations
@@ -113,6 +127,9 @@ jobs:
   tag:
     name: Tag the repository
     needs: [version, pipeline]
+    # Skipped-ness propagates through the whole needs chain, so this has to
+    # restate that only the pipeline's own outcome matters.
+    if: ${{ !cancelled() && needs.pipeline.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
