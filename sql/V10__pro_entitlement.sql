@@ -57,19 +57,6 @@
 -- gap six hours long - so an event older than this is refused rather than allowed to
 -- roll the row back.
 --
--- superseded_subscription_id + superseded_subscription_cancelled_at are a pending
--- chore, not a purchase. When a lifetime purchase lands on a row that rested on a
--- subscription, the lifetime overwrites provider_subscription_id - but the
--- subscription is still live at the provider and would charge again at renewal. Its
--- id is kept here, and the backend cancels it at the provider AFTER the webhook's
--- transaction commits, retrying on a timer until it succeeds:
---   id NULL,     cancelled_at NULL      nothing to cancel
---   id set,      cancelled_at NULL      pending - the retry job picks it up
---   id set,      cancelled_at set       done; kept as the record of what was cancelled
--- A cancellation time without the subscription it belongs to is meaningless, hence
--- ck_user_entitlement_superseded_pair. The provider is the row's payment_provider:
--- there is one, and a lifetime replacing a subscription went through the same one.
---
 -- ON DELETE CASCADE like every other table naming an account. The application
 -- deletes the row explicitly before the account, because ddl-auto=validate does not
 -- check delete rules; the rule is the safety net, not the mechanism.
@@ -87,8 +74,6 @@ CREATE TABLE user_entitlement (
     provider_product_id         varchar(100),
     provider_order_id           varchar(100),
     last_provider_event_at      timestamptz,
-    superseded_subscription_id            varchar(100),
-    superseded_subscription_cancelled_at  timestamptz,
     created_at                  timestamptz  NOT NULL,
     updated_at                  timestamptz  NOT NULL,
     CONSTRAINT pk_user_entitlement              PRIMARY KEY (id),
@@ -103,9 +88,7 @@ CREATE TABLE user_entitlement (
         (charged_amount_minor_units IS NULL) = (charged_currency IS NULL)),
     CONSTRAINT ck_user_entitlement_grant_unpaid CHECK (
         source <> 'GRANT' OR (payment_provider IS NULL AND charged_amount_minor_units IS NULL)),
-    CONSTRAINT ck_user_entitlement_superseded_pair CHECK (
-        superseded_subscription_cancelled_at IS NULL OR superseded_subscription_id IS NOT NULL),
-    CONSTRAINT fk_user_entitlement_user        FOREIGN KEY (user_id)
+    CONSTRAINT fk_user_entitlement_user         FOREIGN KEY (user_id)
         REFERENCES app_user (id) ON DELETE CASCADE
 );
 
@@ -113,18 +96,6 @@ CREATE TABLE user_entitlement (
 -- subscription it belongs to, and failing that through the customer.
 CREATE INDEX ix_user_entitlement_provider_subscription ON user_entitlement (provider_subscription_id);
 CREATE INDEX ix_user_entitlement_provider_customer     ON user_entitlement (provider_customer_id);
-
--- What the cancellation retry job scans for. Partial, so it holds only the handful of
--- rows still waiting on the provider rather than every entitlement ever sold.
-CREATE INDEX ix_user_entitlement_superseded_pending ON user_entitlement (id)
-    WHERE superseded_subscription_id IS NOT NULL
-      AND superseded_subscription_cancelled_at IS NULL;
-
-COMMENT ON COLUMN user_entitlement.superseded_subscription_id IS
-    'Subscription a lifetime purchase replaced; the backend cancels it at the provider.';
-
-COMMENT ON COLUMN user_entitlement.superseded_subscription_cancelled_at IS
-    'When the provider confirmed the superseded subscription cancelled; NULL while pending.';
 
 COMMENT ON COLUMN user_entitlement.paid_until IS
     'End of what has been paid for; NULL for LIFETIME and for a GRANT without an end.';

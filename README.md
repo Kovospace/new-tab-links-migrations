@@ -147,3 +147,10 @@ Things in `V10` (the pro entitlement) that the backend relies on and cannot chec
   the backend's enums needs a migration here first, or the insert fails at runtime.
 - **`charged_currency` is checked for shape, not against EUR/USD**, on purpose: a payment in an
   unexpected currency must still be recordable.
+- **`ck_user_entitlement_superseded_pair` (`V11`)** forbids a cancellation time without the
+  superseded subscription it belongs to. The partial index beside it is what the backend's
+  cancellation retry job scans.
+
+**Tag `0.0.10` is broken and must never be deployed.** It edited `V10` after `0.0.9` had released
+it, which stopped Flyway on every database that had applied it. `V10` is back to its `0.0.9`
+content, and the change it made is `V11` (tag `0.0.11`).
