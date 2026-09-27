@@ -136,3 +136,14 @@ Things in `V1` that are decisions rather than transcription:
   zone silently reinterprets values when the server's timezone differs from the JVM's.
 - **Constraint names are explicit.** Hibernate's generated names look like
   `FKq1qi1gdg6850nkqc81s7o91ch`, which cannot be referenced from a later migration.
+
+Things in `V10` (the pro entitlement) that the backend relies on and cannot check itself -
+`ddl-auto=validate` sees none of them:
+
+- **`uk_payment_webhook_event_provider_event` is the webhook replay protection.** The backend
+  claims each provider event by inserting it; a redelivery fails on this index and changes
+  nothing. Drop it and every retried webhook is applied twice.
+- **CHECK constraints name the allowed sources, statuses, outcomes and providers.** A new value in
+  the backend's enums needs a migration here first, or the insert fails at runtime.
+- **`charged_currency` is checked for shape, not against EUR/USD**, on purpose: a payment in an
+  unexpected currency must still be recordable.
