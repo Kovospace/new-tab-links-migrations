@@ -71,6 +71,10 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `visitor_token` | `V2:24` | |
 | `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips |
 | `closed_tab` | `V9:42` | |
+| `user_entitlement` | `V10:63` | `V11` — superseded subscription |
+| `payment_webhook_event` | `V10:122` | |
+| `daily_metric` | `V12:32` | |
+| `website_visitor_hash` | `V12:41` | |
 
 `V1:25` means `sql/V1__initial_schema.sql`, line 25.
 
@@ -83,6 +87,8 @@ Every foreign key cascades **except one**:
 - `user_device` → `refresh_token`: `CASCADE`
 - `profile` → `environment` → `link_group` → `link_subgroup`, `link`: `CASCADE`
 - `profile` → `closed_tab`: `CASCADE`
+- `app_user` → `user_entitlement`: `CASCADE`
+- `daily_metric`, `website_visitor_hash`: no foreign keys — aggregates, tied to no account
 - **`link_subgroup` → `link`: `ON DELETE SET NULL`.** Deleting a subgroup keeps its links and
   moves them up to the group.
 
