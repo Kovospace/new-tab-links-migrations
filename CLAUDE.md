@@ -75,6 +75,7 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `payment_webhook_event` | `V10:122` | |
 | `daily_metric` | `V12:32` | |
 | `website_visitor_hash` | `V12:41` | |
+| `admin_sign_in_lock` | `V13:25` | |
 
 `V1:25` means `sql/V1__initial_schema.sql`, line 25.
 
@@ -89,6 +90,7 @@ Every foreign key cascades **except one**:
 - `profile` → `closed_tab`: `CASCADE`
 - `app_user` → `user_entitlement`: `CASCADE`
 - `daily_metric`, `website_visitor_hash`: no foreign keys — aggregates, tied to no account
+- `admin_sign_in_lock`: no foreign keys — the operator has no account
 - **`link_subgroup` → `link`: `ON DELETE SET NULL`.** Deleting a subgroup keeps its links and
   moves them up to the group.
 
