@@ -69,7 +69,7 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `link_subgroup` | `V1:180` | `V3` — `description`, `default_collapsed`; `V5` — `catch_links_into_tab_group`; `V7` — `color` |
 | `link` | `V1:194` | |
 | `visitor_token` | `V2:24` | |
-| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips |
+| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips; `V15` — dismissed tips |
 | `closed_tab` | `V9:42` | |
 | `user_entitlement` | `V10:63` | `V11` — superseded subscription |
 | `payment_webhook_event` | `V10:122` | |
