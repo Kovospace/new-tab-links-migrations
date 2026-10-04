@@ -60,10 +60,10 @@ Read the one file a question needs, from the line given — not the whole of `V1
 |---|---|---|
 | `app_user` | `V1:25` | |
 | `user_identity` | `V1:45` | |
-| `user_device` | `V1:63` | `V4` — `installation_id`; old identity constraint replaced by two partial unique indexes |
+| `user_device` | `V1:63` | `V4` — `installation_id`; old identity constraint replaced by two partial unique indexes; `V16` — `inventory` (jsonb) + `inventory_reported_at` |
 | `emailed_token` | `V1:86` | |
 | `single_use_code` | `V1:104` | |
-| `refresh_token` | `V1:122` | |
+| `refresh_token` | `V1:122` | `V16` — partial index on live tokens by `user_id` |
 | `environment` | `V1:154` | `V3` — `profile_id` (NOT NULL), `description` |
 | `link_group` | `V1:167` | `V3` — `description` |
 | `link_subgroup` | `V1:180` | `V3` — `description`, `default_collapsed`; `V5` — `catch_links_into_tab_group`; `V7` — `color` |
