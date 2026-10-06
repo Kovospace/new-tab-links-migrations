@@ -3,14 +3,14 @@ name: Validate migrations (PR)
 # The same validation the release run performs, moved to review time. A migration
 # that does not apply is a failed init container and a backend that never starts,
 # so it is worth knowing before the change is merged rather than when someone
-# tries to publish it.
+# tries to publish it. The check itself lives in Kovospace/kovostack-github-workflows
+# (flyway-validate.yml).
 
 on:
   pull_request:
     paths:
       - 'sql/**'
       - 'Dockerfile'
-      - '.github/workflows/validate-migrations.yml'
       - '.github/workflows/pull-request.yml'
 
 # A new push supersedes the run in flight.
@@ -20,4 +20,4 @@ concurrency:
 
 jobs:
   validate:
-    uses: ./.github/workflows/validate-migrations.yml
+    uses: Kovospace/kovostack-github-workflows/.github/workflows/flyway-validate.yml@2.3.0
