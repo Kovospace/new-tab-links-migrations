@@ -1,28 +1,13 @@
 name: Build & push migrations image
 
-# Thin caller. The pipeline itself lives in Kovospace/kovostack-github-workflows.
+# Thin caller. The pipeline itself - resolve the next version, validate the
+# migrations against a throwaway Postgres, build & push the image tagged with
+# that version, then tag this repository - lives in
+# Kovospace/kovostack-github-workflows (flyway-release.yml).
 #
-# Four things differ from an ordinary application caller:
-#
-#   1. The image is tagged with an explicit VERSION, not the commit sha. That tag
-#      is a contract: the backend declares the schema version it was written
-#      against in its Maven property flyway.migrations.schema.version, and the
-#      deployment pins this image to the same value. A commit-derived tag could
-#      not express that.
-#
-#   2. That version is derived here, not typed in: the newest x.y.z tag in the
-#      repository with its patch number increased by one (0.0.1 when there are no
-#      tags at all). The repository is then tagged with it, AFTER the image has
-#      been pushed - so a tag exists only for a version that was really published,
-#      and the code and the image cannot disagree.
-#
-#   3. The migrations are applied to a throwaway Postgres before anything is
-#      pushed. Flyway cannot check a migration without a database, and a broken
-#      one surfaces as an init container that will not start.
-#
-#   4. There is NO deploy step. This image is not a workload of its own - it runs
-#      as an init container inside the backend's pod - so there is nothing to
-#      write into the GitOps versions/ directory, and no app_namespace to pass.
+# The image tag is the schema version: the backend declares the version it was
+# written against in its Maven property flyway.migrations.schema.version, and
+# its deployment pins this image to the same value.
 #
 # Releasing a new schema version:
 #   1. add sql/V<n>__<description>.sql
@@ -53,94 +38,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  version:
-    name: Resolve version
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.resolve.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Tags are the input to this job, and the default shallow checkout
-          # fetches none of them.
-          fetch-depth: 0
-
-      - id: resolve
-        # Through the environment, never interpolated into the script: a
-        # workflow_dispatch string is arbitrary text.
-        env:
-          OVERRIDE: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-
-          override="$OVERRIDE"
-          if [ -n "$override" ]; then
-            next="$override"
-          else
-            # --sort=-v:refname orders numerically, so 0.0.10 beats 0.0.9. The
-            # grep drops anything that is not a bare x.y.z.
-            latest=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
-            latest=${latest:-0.0.0}
-            IFS=. read -r major minor patch <<< "$latest"
-            next="${major}.${minor}.$((patch + 1))"
-            echo "Newest tag: ${latest}"
-          fi
-
-          if ! printf '%s' "$next" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::'${next}' is not a x.y.z version."
-            exit 1
-          fi
-
-          # Cheaper to fail here than after the image is in the registry.
-          if git rev-parse -q --verify "refs/tags/${next}" >/dev/null; then
-            echo "::error::Tag ${next} already exists."
-            exit 1
-          fi
-
-          echo "Publishing: ${next}"
-          echo "version=${next}" >> "$GITHUB_OUTPUT"
-
-  # Nothing is published until the migrations have actually been applied to a
-  # real Postgres. See .github/workflows/validate-migrations.yml.
-  # Unless skip_validation is ticked, in which case this job is skipped.
-  validate:
-    if: ${{ !inputs.skip_validation }}
-    uses: ./.github/workflows/validate-migrations.yml
-
-  pipeline:
-    needs: [version, validate]
-    # A skipped validate would otherwise skip everything downstream of it. A
-    # failed one still stops the release.
-    if: >-
-      ${{ !cancelled()
-          && needs.version.result == 'success'
-          && (needs.validate.result == 'success'
-              || (inputs.skip_validation && needs.validate.result == 'skipped')) }}
-    uses: Kovospace/kovostack-github-workflows/.github/workflows/build-deploy.yml@2.0.3
-    with:
-      image_name: new-tab-links-migrations
-      image_version: ${{ needs.version.outputs.version }}
-      build: true
-      deploy: false
-    secrets: inherit
-
-  tag:
-    name: Tag the repository
-    needs: [version, pipeline]
-    # Skipped-ness propagates through the whole needs chain, so this has to
-    # restate that only the pipeline's own outcome matters.
-    if: ${{ !cancelled() && needs.pipeline.result == 'success' }}
-    runs-on: ubuntu-latest
+  release:
+    uses: Kovospace/kovostack-github-workflows/.github/workflows/flyway-release.yml@2.3.0
+    # The release tags this repository once the image is pushed.
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - env:
-          VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "$VERSION" -m "Schema version $VERSION"
-          git push origin "$VERSION"
+    with:
+      image_name: new-tab-links-migrations
+      version: ${{ inputs.version }}
+      skip_validation: ${{ inputs.skip_validation }}
+    secrets: inherit

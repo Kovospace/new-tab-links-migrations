@@ -66,11 +66,14 @@ route a database took to get there. On top of that, `sql/` is checked to be appe
 newest tag, because an edited migration is a checksum mismatch and a backend that will not start.
 
 This runs on every pull request touching `sql/` or the `Dockerfile`, and again as a gate in the
-release run — nothing is published that has not been applied to a database first. The definition
-is shared: `.github/workflows/validate-migrations.yml`.
+release run — nothing is published that has not been applied to a database first. Both the
+check and the release pipeline live in
+[`Kovospace/kovostack-github-workflows`](https://github.com/Kovospace/kovostack-github-workflows)
+(`flyway-validate.yml`, `flyway-release.yml`); this repository only holds thin callers.
 
-The Postgres major version is pinned in that workflow's `postgres_image` default and **must track
-the real database**; validating against a different major can miss a syntax or behaviour change.
+The Postgres major version is the shared workflow's `postgres_image` input (default
+`postgres:17-alpine`) and **must track the real database**; validating against a different
+major can miss a syntax or behaviour change.
 
 ## Environment variables
 
