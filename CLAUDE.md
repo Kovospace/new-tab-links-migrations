@@ -69,8 +69,9 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `link_subgroup` | `V1:180` | `V3` — `description`, `default_collapsed`; `V5` — `catch_links_into_tab_group`; `V7` — `color` |
 | `link` | `V1:194` | |
 | `visitor_token` | `V2:24` | |
-| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips; `V15` — dismissed tips; `V17` — record closed tabs |
+| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips; `V15` — dismissed tips; `V17` — record closed tabs; `V18` — record browsing history |
 | `closed_tab` | `V9:42` | |
+| `visit` | `V18:66` | |
 | `user_entitlement` | `V10:63` | `V11` — superseded subscription |
 | `payment_webhook_event` | `V10:122` | |
 | `daily_metric` | `V12:32` | |
@@ -87,7 +88,7 @@ Every foreign key cascades **except one**:
   `refresh_token`, `environment`, `profile`: `ON DELETE CASCADE`
 - `user_device` → `refresh_token`: `CASCADE`
 - `profile` → `environment` → `link_group` → `link_subgroup`, `link`: `CASCADE`
-- `profile` → `closed_tab`: `CASCADE`
+- `profile` → `closed_tab`, `visit`: `CASCADE`
 - `app_user` → `user_entitlement`: `CASCADE`
 - `daily_metric`: no foreign keys — aggregates, tied to no account
 - `admin_sign_in_lock`: no foreign keys — the operator has no account
