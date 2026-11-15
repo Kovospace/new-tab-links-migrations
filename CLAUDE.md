@@ -67,9 +67,9 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `environment` | `V1:154` | `V3` — `profile_id` (NOT NULL), `description` |
 | `link_group` | `V1:167` | `V3` — `description` |
 | `link_subgroup` | `V1:180` | `V3` — `description`, `default_collapsed`; `V5` — `catch_links_into_tab_group`; `V7` — `color` |
-| `link` | `V1:194` | |
+| `link` | `V1:194` | `V19` — `favorite` |
 | `visitor_token` | `V2:24` | |
-| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips; `V15` — dismissed tips; `V17` — record closed tabs; `V18` — record browsing history |
+| `profile` | `V3:33` | `V6` — drag and drop; `V8` — hide tips; `V15` — dismissed tips; `V17` — record closed tabs; `V18` — record browsing history; `V19` — enable favorites |
 | `closed_tab` | `V9:42` | |
 | `visit` | `V18:66` | |
 | `user_entitlement` | `V10:63` | `V11` — superseded subscription |
