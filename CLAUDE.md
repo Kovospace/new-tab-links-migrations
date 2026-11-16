@@ -77,6 +77,8 @@ Read the one file a question needs, from the line given — not the whole of `V1
 | `daily_metric` | `V12:32` | |
 | `website_visitor_hash` | `V12:41` | `V14` — dropped; the website deduplicates visits itself |
 | `admin_sign_in_lock` | `V13:25` | |
+| `fair_use_limits` | `V20:40` | |
+| `user_fair_use_override` | `V20:74` | |
 
 `V1:25` means `sql/V1__initial_schema.sql`, line 25.
 
@@ -90,6 +92,8 @@ Every foreign key cascades **except one**:
 - `profile` → `environment` → `link_group` → `link_subgroup`, `link`: `CASCADE`
 - `profile` → `closed_tab`, `visit`: `CASCADE`
 - `app_user` → `user_entitlement`: `CASCADE`
+- `app_user` → `user_fair_use_override`: `CASCADE`
+- `fair_use_limits`: no foreign keys — one global row
 - `daily_metric`: no foreign keys — aggregates, tied to no account
 - `admin_sign_in_lock`: no foreign keys — the operator has no account
 - **`link_subgroup` → `link`: `ON DELETE SET NULL`.** Deleting a subgroup keeps its links and
